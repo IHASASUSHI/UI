@@ -1,3 +1,7 @@
+/*
+This whole file is used to store all the methods for mouse functions
+*/
+
 void mousePressed() {
   for (int i = 0; i < Button_num; i++) {
     dist[i][0] = py - by[i];

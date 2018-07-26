@@ -1,3 +1,9 @@
+/*
+This whole file is used to store "most" the methods for what the buttons do
+
+do note that some of the buttons have callback functions which act as a secondary method that is enacted depending on the way they were programmed to act
+*/
+
 void Calibration() {
   if (IsDragged == false) {
     Is_Main_Button_Pressed_true = true;
@@ -19,12 +25,19 @@ void Bobbin_Setting() {
     Main_Menu_Selected = 3;
   }
 }
-
+void Start() {
+   if (IsDragged == false) {
+    Main_Menu_Selected = 4;
+    Sub_Menu_Selected = 0;
+    value = 0;
+    Is_Action = true;
+  }
+}
 
 
 void Back() {
   if (IsDragged == false) {
-    Is_In_Submenu = false;
+    Is_In_Submenu = false;  
     Is_Back_Button_Pressed = true;
     value = 1;
   }
@@ -196,6 +209,15 @@ void enter() {
       }
       else {
       value = parseInt(Bobbin_Diameter.getText(), 10);
+      }
+    }
+    else if (Bobbin_Length.isFocus()) {
+      Sub_Menu_Selected = 3;
+      if(Bobbin_Length.getText().equals("")) {
+      value = 0;
+      }
+      else {
+      value = parseInt(Bobbin_Length.getText(), 10);
       }
     }
     Another_Stuid_Checker_The_Second = true;

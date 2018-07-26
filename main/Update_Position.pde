@@ -1,3 +1,10 @@
+/*
+  Stores the methods that are used to initiate the movement of buttons when needed to
+  
+  do note that these all work based on taking the frame rate of the program.
+  This method is extremly crude but I cant think of any other stupid way.
+*/
+
 void Update_Position() {
   if (IsDragged && rx < x/2 && Is_In_Submenu == false) {
     for (int i = 0; i < Button_num; i++) {

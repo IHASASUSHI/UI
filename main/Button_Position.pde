@@ -1,3 +1,7 @@
+/*
+This whole file is used to store all the methods for extending or retracting certain button sets
+*/
+
 boolean Extend_Main_button(float frames) {
   if (Buttons.get(0).getPosition()[0] >= 0) {
     return true;
@@ -6,6 +10,7 @@ boolean Extend_Main_button(float frames) {
     for (int i = 0; i < Button_num; i++) {
       Buttons.get(i).setPosition(Buttons.get(i).getPosition()[0] + (frames - temp), Buttons.get(i).getPosition()[1]);
     }
+     Start.setPosition(Start.getPosition()[0] - (frames - temp), Start.getPosition()[1]);
     return false;
   }
 }
@@ -18,6 +23,7 @@ boolean Retract_Main_button(float frames) {
     for (int i = 0; i < Button_num; i++) {
       Buttons.get(i).setPosition(Buttons.get(i).getPosition()[0] - (frames - temp), Buttons.get(i).getPosition()[1]);
     }
+     Start.setPosition(Start.getPosition()[0] + (frames - temp), Start.getPosition()[1]);
     return false;
   }
 }
@@ -74,7 +80,7 @@ boolean Extend_Manual_Control(float frames) {
 }
 
 boolean Retract_Speed_Settings (float frames) {   
-  if (Carriage_Speed_Down.getPosition()[1] >= y + y/2 - y/6) {
+  if (Carriage_Speed_Down.getPosition()[1] >= y + y/2 - y/5) {
     return true;
   }
   else {
@@ -91,7 +97,7 @@ boolean Retract_Speed_Settings (float frames) {
 }
 
 boolean Extend_Speed_Settings (float frames) {   
-  if (Carriage_Speed_Down.getPosition()[1] <= y/2 - y/6 - y/7) {
+  if (Carriage_Speed_Down.getPosition()[1] <= y/2 - y/5) {
     return true;
   }
   else {
@@ -113,6 +119,7 @@ boolean Retract_Bobbin_Settings(float frames) {
   } else {
     Ammount.setPosition(Ammount.getPosition()[0], Ammount.getPosition()[1] + (frames - temp)*1.7);
     Bobbin_Diameter.setPosition(Bobbin_Diameter.getPosition()[0], Bobbin_Diameter.getPosition()[1] + (frames - temp)*1.7);
+    Bobbin_Length.setPosition(Bobbin_Length.getPosition()[0], Bobbin_Length.getPosition()[1] + (frames - temp)*1.7);
     return false;
   }
 }
@@ -123,6 +130,7 @@ boolean Extend_Bobbin_Settings(float frames) {
   } else {
     Ammount.setPosition(Ammount.getPosition()[0], Ammount.getPosition()[1] - (frames - temp)*1.7);
     Bobbin_Diameter.setPosition(Bobbin_Diameter.getPosition()[0], Bobbin_Diameter.getPosition()[1] - (frames - temp)*1.7);
+    Bobbin_Length.setPosition(Bobbin_Length.getPosition()[0], Bobbin_Length.getPosition()[1] - (frames - temp)*1.7);
     return false;
   }
 }

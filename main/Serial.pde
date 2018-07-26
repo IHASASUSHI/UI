@@ -1,3 +1,18 @@
+/*
+This whole file is where communication between the arduino and PI take place
+
+The protocall for this communication is based on 6 bytes
+
+byte 0 : tells which main menu button was pressed
+byte 1 : tells which sub menu button was pressed within the main menu
+byte 2 : data to be sent for the arduino to change in its program
+byte 3 : data to be sent for the arduino to change in its program
+byte 4 : data to be sent for the arduino to change in its program
+byte 5 : data to be sent for the arduino to change in its program
+
+do note that byte 2-4 is concatinated within the arduino to form a single float
+*/
+
 void serialEvent(Serial myPort) {
   val = myPort.readStringUntil('\n');
   if (val != null) {

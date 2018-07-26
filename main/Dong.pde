@@ -1,3 +1,7 @@
+/*
+Fancy graphic thingy
+*/
+
 class Dong {
   float x, y;
   float s0, s1;
