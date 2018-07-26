@@ -131,7 +131,7 @@ void draw() {
     }
     Text_Field_Pressed(frameCount);
 
-    if (Another_Stuid_Checker) {
+    if (Another_Stuid_Checker) {          //got lazy naming the buttons but this one checks of a numpad was clicked
       Num_Pad_Clicked();
     }
   }
