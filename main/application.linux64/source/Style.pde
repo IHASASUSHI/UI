@@ -92,7 +92,8 @@ void Style_Number_Pad(String Name) {
   c.addCallback(
     new CallbackListener() {
     public void controlEvent(CallbackEvent theEvent) {
-      if (theEvent.getAction()==ControlP5.ACTION_PRESS) {
+      if (theEvent.getController().isMouseOver() == true && Another_Stuid_Checker == false) {
+        MouseRepositioner.mouseMove(800,480);
         holder = theEvent.getController().getName();
         Another_Stuid_Checker = true;
       }

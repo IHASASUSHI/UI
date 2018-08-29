@@ -223,9 +223,10 @@ void enter() {
   }
 }
 void Del() {
-  if (IsDragged == false && !Ammount.getText().isEmpty()) {
+  if (IsDragged == false) {
     holder = "";
     Another_Stuid_Checker = true;
+    println("ding");
     Delete = true;
   }
 }

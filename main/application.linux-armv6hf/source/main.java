@@ -8,6 +8,7 @@ import controlP5.*;
 import java.util.*; 
 import java.nio.*; 
 import java.io.*; 
+import java.awt.Robot; 
 
 import java.util.HashMap; 
 import java.util.ArrayList; 
@@ -26,12 +27,15 @@ public class main extends PApplet {
 
 
 
+
 ControlP5 cp5;                                       //initializing controlp5
 Serial myPort;                                       //required for serial communication
 String val;
 boolean firstContact = false;
 ByteBuffer B = ByteBuffer.allocate(4);
 
+int milisecs = 0;
+Robot MouseRepositioner;
 Dong[][] d;                                          //Matrix for the UI background spinning dots
 String[] Main_Button_names = {"Calibration", "Speed_Setting", "Bobbin_Setting"};
 String[] Num_Pad_Button_names = {"1", "2", "3", "4", "5", "6", "7", "8", "9"};
@@ -63,6 +67,9 @@ Slider Carriage_Speed_Knob;
 Textfield Ammount;
 Textfield Bobbin_Length;
 Textfield Bobbin_Diameter;
+Extender Extender = new Extender();
+Retractor Retractor = new Retractor();
+CallbackListener cb;
 float Bobbin_Default_Length = 7011.46496815f;          //hard coded value of the bobbin length
 int[][] dist = new int[Button_num][3];                //distance of the mouse to the position of all the buttons and holds the values of both where the button should go if upon being hit by the edge of the screen
 float x = 800;                                        //Screen Length
@@ -90,23 +97,40 @@ boolean IsHold = false;                               //tells if the user is hol
 boolean Another_Stuid_Checker = false;                //checks if there was a response from the nubmerpad
 boolean Another_Stuid_Checker_The_Second = false;     //checks if the enter button was pressed
 boolean Delete = false;                               //Checks if delete button is pressed
-float temp = frameCount;                              //Records the initial fame count upon the main menu being dragged
+float temp = 0;                              //Records the initial fame count upon the main menu being dragged
 String holder = "";
+boolean Main_checker = false;
+boolean Back_checker = false;
+int framerate = 10;
 
 public void setup() {
 
   
-  println(Serial.list());
-  String portNum = Serial.list()[0];
-  myPort = new Serial(this, portNum, 115200);
-  myPort.bufferUntil('\n');
+  try {
+    println(Serial.list());
+    String portNum = Serial.list()[0];
+    myPort = new Serial(this, portNum, 115200);
+    myPort.bufferUntil('\n');
+  }
+  catch (ArrayIndexOutOfBoundsException ex) {
+    println("ERROR, Arduino is either not connected or is not communicating. Please check the line connected to the Arduino and restart the PI");
+  }
   B.order(ByteOrder.BIG_ENDIAN);
-
+  
+  try {
+    MouseRepositioner = new Robot();
+    MouseRepositioner.setAutoDelay(0);
+  }
+  catch(Exception e) {
+    e.printStackTrace();
+  }
+  
   cp5 = new ControlP5(this);
+  Create_Buttons();                         //Go to this file to see the buttons being created
+
   for (int i = 0; i < 2; i++) {
     updown[i] = 0;                          //Initializes the updown array to hold the positions of where to place the menu buttons when scrolled out of the screen
   }
-  Create_Buttons();                         //Go to this file to see the buttons being created
 
   d = new Dong[nx][ny];                     //Fancy background thingy
 
@@ -116,6 +140,9 @@ public void setup() {
     }
   }
 
+  Extender.start();
+  Retractor.start();
+
   noStroke();
   
 }
@@ -123,8 +150,8 @@ public void setup() {
 public void draw() {
   background(0);
   fill(255, 100);
-
-  if (mousePressed == false) {             //Records the position of the mouse when not pressed
+  
+  /*if (mousePressed == false) {             //Records the position of the mouse when not pressed
     py = mouseY;
     for (int i = 0; i < Button_num; i++) {
       by[i] = (int)Buttons.get(i).getPosition()[1];
@@ -132,26 +159,14 @@ public void draw() {
   }
   rx = mouseX;                            //Records the position of the mouse
   ry = mouseY;
-  Update_Position();                      //Updates the position of the main menu
-
-  if (Is_Main_Button_Pressed_true) {      //checks when a certain button is pressed with these series of if statements
-    if (temp == 0) {                      //temp is used to store the initial frame count upon update position being called
-      temp = frameCount;                  //processing has a internal framecounter
-    }
-    Main_Button_Pressed(frameCount);
-  }
-  if (Is_Back_Button_Pressed) {
-    if (temp == 0) {
-      temp = frameCount;
-    }
-    Back_Button_Pressed(frameCount);
-  }
+  Update_Position();                      //Updates the position of the main menu*/
+    
   if (Ammount.isFocus() || Bobbin_Diameter.isFocus() || Bobbin_Length.isFocus()) {
     Focus_Text_box();
     if (temp == 0) {
-      temp = frameCount;
+      temp = 1;
     }
-    Text_Field_Pressed(frameCount);
+    Text_Field_Pressed(framerate);
 
     if (Another_Stuid_Checker) {          //got lazy naming the buttons but this one checks of a numpad was clicked
       Num_Pad_Clicked();
@@ -165,9 +180,9 @@ public void draw() {
     Bobbin_Length.keepFocus(false);
     Bobbin_Length.setFocus(false);
     if (temp == 0) {
-      temp = frameCount;
+      temp = 1;
     }
-    Enter_Pressed(frameCount);
+    Enter_Pressed(framerate);
   }
 
   if (IsHold) {
@@ -178,16 +193,18 @@ public void draw() {
       Is_Action = true;
     }
   }
-
+  
   pushMatrix();                          //Fancy graphic thingy
   translate(width/2 + 150, height/2);
   rotate(frameCount*0.001f);
+
   for (int x = 0; x<nx; x++) {
     for (int y = 0; y<ny; y++) {
       d[x][y].display();
     }
   }
   popMatrix();
+  MouseRepositioner.mouseMove(800,480);
 }
 /*
 This whole file is used to store all the methods for extending or retracting certain button sets
@@ -199,7 +216,7 @@ public boolean Extend_Main_button(float frames) {
   }
   else {
     for (int i = 0; i < Button_num; i++) {
-      Buttons.get(i).setPosition(Buttons.get(i).getPosition()[0] + (frames - temp), Buttons.get(i).getPosition()[1]);
+      Buttons.get(i).setPosition(Buttons.get(i).getPosition()[0] + (frames), Buttons.get(i).getPosition()[1]);
     }
      Start.setPosition(Start.getPosition()[0] - (frames - temp), Start.getPosition()[1]);
     return false;
@@ -212,7 +229,7 @@ public boolean Retract_Main_button(float frames) {
   }
   else {
     for (int i = 0; i < Button_num; i++) {
-      Buttons.get(i).setPosition(Buttons.get(i).getPosition()[0] - (frames - temp), Buttons.get(i).getPosition()[1]);
+      Buttons.get(i).setPosition(Buttons.get(i).getPosition()[0] - (frames), Buttons.get(i).getPosition()[1]);
     }
      Start.setPosition(Start.getPosition()[0] + (frames - temp), Start.getPosition()[1]);
     return false;
@@ -224,7 +241,7 @@ public boolean Retract_Back_Button(float frames) {
     return true;
   }
   else {
-    Back.setPosition(0, Back.getPosition()[1] - (frames - temp)/5);
+    Back.setPosition(0, Back.getPosition()[1] - (frames)/5);
     return false;
   }
 }
@@ -234,7 +251,7 @@ public boolean Extend_Back_Button(float frames) {
     return true;
   }
   else {
-    Back.setPosition(0, Back.getPosition()[1] + (frames - temp)/5);
+    Back.setPosition(0, Back.getPosition()[1] + (frames)/5);
     return false;
   }
 }
@@ -243,13 +260,14 @@ public boolean Retract_Manual_Control(float frames) {
   if (Move_Carrage_Right.getPosition()[1] >= y + y/2) {
     return true;
   } else {
-    Position.setPosition(Position.getPosition()[0], Position.getPosition()[1] - (frames - temp)*1.7f);
-    Move_Carrage_Right.setPosition(Move_Carrage_Right.getPosition()[0], Move_Carrage_Right.getPosition()[1] + (frames - temp)*1.7f);
-    Move_Carrage_Left.setPosition(Move_Carrage_Left.getPosition()[0], Move_Carrage_Left.getPosition()[1] + (frames - temp)*1.7f);
-    Move_Winder_Up.setPosition(Move_Winder_Up.getPosition()[0], Move_Winder_Up.getPosition()[1] + (frames - temp)*1.7f);
-    Move_Winder_Down.setPosition(Move_Winder_Down.getPosition()[0], Move_Winder_Down.getPosition()[1] + (frames - temp)*1.7f);
-    Carriage_Right_Limit.setPosition(Carriage_Right_Limit.getPosition()[0], Carriage_Right_Limit.getPosition()[1] - (frames - temp)*1.7f);
-    Carriage_Left_Limit.setPosition(Carriage_Left_Limit.getPosition()[0], Carriage_Left_Limit.getPosition()[1] - (frames - temp)*1.7f);
+    Position.setPosition(Position.getPosition()[0], Position.getPosition()[1] - (frames)*1.7f);
+    Carriage_Right_Limit.setPosition(Carriage_Right_Limit.getPosition()[0], Carriage_Right_Limit.getPosition()[1] - (frames)*1.7f);
+    Carriage_Left_Limit.setPosition(Carriage_Left_Limit.getPosition()[0], Carriage_Left_Limit.getPosition()[1] - (frames)*1.7f);
+    
+    Move_Carrage_Right.setPosition(Move_Carrage_Right.getPosition()[0], Move_Carrage_Right.getPosition()[1] + (frames)*1.7f);
+    Move_Carrage_Left.setPosition(Move_Carrage_Left.getPosition()[0], Move_Carrage_Left.getPosition()[1] + (frames)*1.7f);
+    Move_Winder_Up.setPosition(Move_Winder_Up.getPosition()[0], Move_Winder_Up.getPosition()[1] + (frames)*1.7f);
+    Move_Winder_Down.setPosition(Move_Winder_Down.getPosition()[0], Move_Winder_Down.getPosition()[1] + (frames)*1.7f);
     return false;
   }
 }
@@ -259,13 +277,14 @@ public boolean Extend_Manual_Control(float frames) {
     return true;
   }
   else {
-    Position.setPosition(Position.getPosition()[0], Position.getPosition()[1] + (frames - temp)*1.7f);
-    Move_Carrage_Right.setPosition(Move_Carrage_Right.getPosition()[0], Move_Carrage_Right.getPosition()[1] - (frames - temp)*1.7f);
-    Move_Carrage_Left.setPosition(Move_Carrage_Left.getPosition()[0], Move_Carrage_Left.getPosition()[1] - (frames - temp)*1.7f);
-    Move_Winder_Up.setPosition(Move_Winder_Up.getPosition()[0], Move_Winder_Up.getPosition()[1] - (frames - temp)*1.7f);
-    Move_Winder_Down.setPosition(Move_Winder_Down.getPosition()[0], Move_Winder_Down.getPosition()[1] - (frames - temp)*1.7f);
-    Carriage_Right_Limit.setPosition(Carriage_Right_Limit.getPosition()[0], Carriage_Right_Limit.getPosition()[1] + (frames - temp)*1.7f);
-    Carriage_Left_Limit.setPosition(Carriage_Left_Limit.getPosition()[0], Carriage_Left_Limit.getPosition()[1] + (frames - temp)*1.7f);
+    Position.setPosition(Position.getPosition()[0], Position.getPosition()[1] + (frames)*1.7f);
+    Carriage_Right_Limit.setPosition(Carriage_Right_Limit.getPosition()[0], Carriage_Right_Limit.getPosition()[1] + (frames)*1.7f);
+    Carriage_Left_Limit.setPosition(Carriage_Left_Limit.getPosition()[0], Carriage_Left_Limit.getPosition()[1] + (frames)*1.7f);
+    
+    Move_Carrage_Right.setPosition(Move_Carrage_Right.getPosition()[0], Move_Carrage_Right.getPosition()[1] - (frames)*1.7f);
+    Move_Carrage_Left.setPosition(Move_Carrage_Left.getPosition()[0], Move_Carrage_Left.getPosition()[1] - (frames)*1.7f);
+    Move_Winder_Up.setPosition(Move_Winder_Up.getPosition()[0], Move_Winder_Up.getPosition()[1] - (frames)*1.7f);
+    Move_Winder_Down.setPosition(Move_Winder_Down.getPosition()[0], Move_Winder_Down.getPosition()[1] - (frames)*1.7f);
     return false;
   }
 }
@@ -275,14 +294,15 @@ public boolean Retract_Speed_Settings (float frames) {
     return true;
   }
   else {
-    Carriage_Speed_Down.setPosition(Carriage_Speed_Down.getPosition()[0], Carriage_Speed_Down.getPosition()[1] + (frames - temp)*1.7f);
-    Winder_Speed_Down.setPosition(Winder_Speed_Down.getPosition()[0], Winder_Speed_Down.getPosition()[1] + (frames - temp)*1.7f);
-    Carriage_Speed_Up.setPosition(Carriage_Speed_Up.getPosition()[0], Carriage_Speed_Up.getPosition()[1] + (frames - temp)*1.7f);
-    Winder_Speed_Up.setPosition(Winder_Speed_Up.getPosition()[0], Winder_Speed_Up.getPosition()[1] + (frames - temp)*1.7f);
-    Winder_Speed_Knob.setPosition(Winder_Speed_Knob.getPosition()[0], Winder_Speed_Knob.getPosition()[1] - (frames - temp)*1.7f);
-    Carriage_Speed_Knob.setPosition(Carriage_Speed_Knob.getPosition()[0], Carriage_Speed_Knob.getPosition()[1] - (frames - temp)*1.7f);
-    test.setPosition(test.getPosition()[0], test.getPosition()[1] - (frames - temp)/5);
-    Stop.setPosition(Stop.getPosition()[0], Stop.getPosition()[1] - (frames - temp)/5);
+    Carriage_Speed_Down.setPosition(Carriage_Speed_Down.getPosition()[0], Carriage_Speed_Down.getPosition()[1] + (frames)*1.7f);
+    Winder_Speed_Down.setPosition(Winder_Speed_Down.getPosition()[0], Winder_Speed_Down.getPosition()[1] + (frames)*1.7f);
+    Carriage_Speed_Up.setPosition(Carriage_Speed_Up.getPosition()[0], Carriage_Speed_Up.getPosition()[1] + (frames)*1.7f);
+    Winder_Speed_Up.setPosition(Winder_Speed_Up.getPosition()[0], Winder_Speed_Up.getPosition()[1] + (frames)*1.7f);
+    
+    Winder_Speed_Knob.setPosition(Winder_Speed_Knob.getPosition()[0], Winder_Speed_Knob.getPosition()[1] - (frames)*1.7f);
+    Carriage_Speed_Knob.setPosition(Carriage_Speed_Knob.getPosition()[0], Carriage_Speed_Knob.getPosition()[1] - (frames)*1.7f);
+    test.setPosition(test.getPosition()[0], test.getPosition()[1] - (frames)/5);
+    Stop.setPosition(Stop.getPosition()[0], Stop.getPosition()[1] - (frames)/5);
     return false;
   }
 }
@@ -292,14 +312,15 @@ public boolean Extend_Speed_Settings (float frames) {
     return true;
   }
   else {
-    Carriage_Speed_Down.setPosition(Carriage_Speed_Down.getPosition()[0], Carriage_Speed_Down.getPosition()[1] - (frames - temp)*1.7f);
-    Winder_Speed_Down.setPosition(Winder_Speed_Down.getPosition()[0], Winder_Speed_Down.getPosition()[1] - (frames - temp)*1.7f);
-    Carriage_Speed_Up.setPosition(Carriage_Speed_Up.getPosition()[0], Carriage_Speed_Up.getPosition()[1] - (frames - temp)*1.7f);
-    Winder_Speed_Up.setPosition(Winder_Speed_Up.getPosition()[0], Winder_Speed_Up.getPosition()[1] - (frames - temp)*1.7f);
-    Winder_Speed_Knob.setPosition(Winder_Speed_Knob.getPosition()[0], Winder_Speed_Knob.getPosition()[1] + (frames - temp)*1.7f);
-    Carriage_Speed_Knob.setPosition(Carriage_Speed_Knob.getPosition()[0], Carriage_Speed_Knob.getPosition()[1] + (frames - temp)*1.7f);
-    test.setPosition(test.getPosition()[0], test.getPosition()[1] + (frames - temp)/5);
-    Stop.setPosition(Stop.getPosition()[0], Stop.getPosition()[1] + (frames - temp)/5);
+    Carriage_Speed_Down.setPosition(Carriage_Speed_Down.getPosition()[0], Carriage_Speed_Down.getPosition()[1] - (frames)*1.7f);
+    Winder_Speed_Down.setPosition(Winder_Speed_Down.getPosition()[0], Winder_Speed_Down.getPosition()[1] - (frames)*1.7f);
+    Carriage_Speed_Up.setPosition(Carriage_Speed_Up.getPosition()[0], Carriage_Speed_Up.getPosition()[1] - (frames)*1.7f);
+    Winder_Speed_Up.setPosition(Winder_Speed_Up.getPosition()[0], Winder_Speed_Up.getPosition()[1] - (frames)*1.7f);
+    
+    Winder_Speed_Knob.setPosition(Winder_Speed_Knob.getPosition()[0], Winder_Speed_Knob.getPosition()[1] + (frames)*1.7f);
+    Carriage_Speed_Knob.setPosition(Carriage_Speed_Knob.getPosition()[0], Carriage_Speed_Knob.getPosition()[1] + (frames)*1.7f);
+    test.setPosition(test.getPosition()[0], test.getPosition()[1] + (frames)/5);
+    Stop.setPosition(Stop.getPosition()[0], Stop.getPosition()[1] + (frames)/5);
     return false;
   }
 }
@@ -308,9 +329,9 @@ public boolean Retract_Bobbin_Settings(float frames) {
   if (Ammount.getPosition()[1] >= y + y/2 - y/3) {
     return true;
   } else {
-    Ammount.setPosition(Ammount.getPosition()[0], Ammount.getPosition()[1] + (frames - temp)*1.7f);
-    Bobbin_Diameter.setPosition(Bobbin_Diameter.getPosition()[0], Bobbin_Diameter.getPosition()[1] + (frames - temp)*1.7f);
-    Bobbin_Length.setPosition(Bobbin_Length.getPosition()[0], Bobbin_Length.getPosition()[1] + (frames - temp)*1.7f);
+    Ammount.setPosition(Ammount.getPosition()[0], Ammount.getPosition()[1] + (frames)*1.7f);
+    Bobbin_Diameter.setPosition(Bobbin_Diameter.getPosition()[0], Bobbin_Diameter.getPosition()[1] + (frames)*1.7f);
+    Bobbin_Length.setPosition(Bobbin_Length.getPosition()[0], Bobbin_Length.getPosition()[1] + (frames)*1.7f);
     return false;
   }
 }
@@ -319,25 +340,25 @@ public boolean Extend_Bobbin_Settings(float frames) {
   if (Ammount.getPosition()[1] <= y/2 - y/3) {
     return true;
   } else {
-    Ammount.setPosition(Ammount.getPosition()[0], Ammount.getPosition()[1] - (frames - temp)*1.7f);
-    Bobbin_Diameter.setPosition(Bobbin_Diameter.getPosition()[0], Bobbin_Diameter.getPosition()[1] - (frames - temp)*1.7f);
-    Bobbin_Length.setPosition(Bobbin_Length.getPosition()[0], Bobbin_Length.getPosition()[1] - (frames - temp)*1.7f);
+    Ammount.setPosition(Ammount.getPosition()[0], Ammount.getPosition()[1] - (frames)*1.7f);
+    Bobbin_Diameter.setPosition(Bobbin_Diameter.getPosition()[0], Bobbin_Diameter.getPosition()[1] - (frames)*1.7f);
+    Bobbin_Length.setPosition(Bobbin_Length.getPosition()[0], Bobbin_Length.getPosition()[1] - (frames)*1.7f);
     return false;
   }
 }
 
 public boolean Retract_Num_Pad(float frames) {   
-  if (Metric.getPosition()[0] >= x + x/1.8f + (((x + 5)/10) * 2)) {
+  if (Metric.getPosition()[0] >= x + x/4) {
     return true;
   }
   else {
     for (int i = 3; i < Num_Pad_Button_num + Button_num; i++) {
-      Buttons.get(i).setPosition(Buttons.get(i).getPosition()[0] + (frames - temp), Buttons.get(i).getPosition()[1]);
+      Buttons.get(i).setPosition(Buttons.get(i).getPosition()[0] + frames, Buttons.get(i).getPosition()[1]);
     }
-    Metric.setPosition(Metric.getPosition()[0] + (frames - temp), Metric.getPosition()[1]);
-    enter.setPosition(enter.getPosition()[0] + (frames - temp), enter.getPosition()[1]);
-    zero.setPosition(zero.getPosition()[0] + (frames - temp), zero.getPosition()[1]);
-    Del.setPosition(Del.getPosition()[0] + (frames - temp), Del.getPosition()[1]);
+    Metric.setPosition(Metric.getPosition()[0] + frames, Metric.getPosition()[1]);
+    enter.setPosition(enter.getPosition()[0] + frames, enter.getPosition()[1]);
+    zero.setPosition(zero.getPosition()[0] + frames, zero.getPosition()[1]);
+    Del.setPosition(Del.getPosition()[0] + frames, Del.getPosition()[1]);
     return false;
   }
 }
@@ -348,12 +369,12 @@ public boolean Extend_Num_Pad(float frames) {
   }
   else {
     for (int i = 3; i < Num_Pad_Button_num + Button_num; i++) {
-      Buttons.get(i).setPosition(Buttons.get(i).getPosition()[0] - (frames - temp), Buttons.get(i).getPosition()[1]);
+      Buttons.get(i).setPosition(Buttons.get(i).getPosition()[0] - frames, Buttons.get(i).getPosition()[1]);
     }
-    Metric.setPosition(Metric.getPosition()[0] - (frames - temp), Metric.getPosition()[1]);
-    enter.setPosition(enter.getPosition()[0] - (frames - temp), enter.getPosition()[1]);
-    zero.setPosition(zero.getPosition()[0] - (frames - temp), zero.getPosition()[1]);
-    Del.setPosition(Del.getPosition()[0] - (frames - temp), Del.getPosition()[1]);
+    Metric.setPosition(Metric.getPosition()[0] - frames, Metric.getPosition()[1]);
+    enter.setPosition(enter.getPosition()[0] - frames, enter.getPosition()[1]);
+    zero.setPosition(zero.getPosition()[0] - frames, zero.getPosition()[1]);
+    Del.setPosition(Del.getPosition()[0] - frames, Del.getPosition()[1]);
     return false;
   }
 }
@@ -582,27 +603,50 @@ public void enter() {
   }
 }
 public void Del() {
-  if (IsDragged == false && !Ammount.getText().isEmpty()) {
+  if (IsDragged == false) {
     holder = "";
     Another_Stuid_Checker = true;
+    println("ding");
     Delete = true;
   }
 }
 /*
 This whole file is used to store the long as fuck initialization of every single button
-
-I hate seeing a large ass main file.
-*/
+ 
+ I hate seeing a large ass main file.
+ */
 
 public void Create_Buttons() {
-    Start = cp5.addButton("Start").setPosition(x - x/4, 0);
+  Start = cp5.addButton("Start").setPosition(x - x/4, 0);
   Style_Start_Button("Start");
   for (int i = 0; i < Button_num; i++) {
-    Buttons.add(cp5.addButton(Main_Button_names[i]).setPosition(0, ((y + (y/4))/Button_num) * i));
+    Buttons.add(cp5.addButton(Main_Button_names[i]).setPosition(0, ((y + (y/8))/Button_num) * i)
+      .activateBy(ControlP5.PRESSED)
+      .addCallback(
+      new CallbackListener() {
+      public void controlEvent(CallbackEvent theEvent) {
+        if (theEvent.getController().isMouseOver() == true && theEvent.getController().isActive() == true) {
+          MouseRepositioner.mouseMove(10000,10000);
+          theEvent.getController().setMousePressed(true);
+          theEvent.getController().setMousePressed(false);
+        }
+      }
+    }));
     Style_Main_Buttons(Main_Button_names[i]);
     updown[i] = 0;
   }
-  Back = cp5.addButton("Back").setPosition(0, -y/8);
+  Back = cp5.addButton("Back").setPosition(0, -y/8)
+    .activateBy(ControlP5.PRESSED)
+    .addCallback(
+    new CallbackListener() {
+    public void controlEvent(CallbackEvent theEvent) {
+      if (theEvent.getController().isMouseOver() == true && theEvent.getController().isActive() == true) {
+        MouseRepositioner.mouseMove(800,480);
+        theEvent.getController().setMousePressed(true);
+        theEvent.getController().setMousePressed(false);
+      }
+    }
+  });
   Style_back_Buttons("Back");
 
   Position = cp5.addSlider("positon").setPosition(x/2 - x/4, y/22 - y)
@@ -614,47 +658,148 @@ public void Create_Buttons() {
     .addCallback(
     new CallbackListener() {
     public void controlEvent(CallbackEvent theEvent) {
-      if (theEvent.getAction()==ControlP5.ACTION_PRESS) {
+      if (theEvent.getController().isMouseOver() == true) {
         IsHold = true;
+        MouseRepositioner.mouseMove(800,480);
       }
     }
-  }
-  );
+  });
   Style_Sub_Buttons("Move_Carrage_Left");
   Move_Carrage_Right = cp5.addButton("Move_Carrage_Right").setPosition(x/2 + x/(12), y + y/2)
     .activateBy(ControlP5.PRESSED)
     .addCallback(
     new CallbackListener() {
     public void controlEvent(CallbackEvent theEvent) {
-      if (theEvent.getAction()==ControlP5.ACTION_PRESS) {
+      if (theEvent.getController().isMouseOver() == true) {
         IsHold = true;
+        MouseRepositioner.mouseMove(800,480);
       }
     }
   }
   );
   Style_Sub_Buttons("Move_Carrage_Right");
-  Move_Winder_Up = cp5.addButton("Move_Winder_Up").setPosition(x/2 - x/12, y + y/3);
+  Move_Winder_Up = cp5.addButton("Move_Winder_Up").setPosition(x/2 - x/12, y + y/3)
+    .activateBy(ControlP5.PRESSED);
   Style_Sub_Buttons("Move_Winder_Up");
-  Move_Winder_Down = cp5.addButton("Move_Winder_Down").setPosition(x/2 - x/12, y + y/1.5f);
+  Move_Winder_Down = cp5.addButton("Move_Winder_Down").setPosition(x/2 - x/12, y + y/1.5f)
+    .activateBy(ControlP5.PRESSED)
+    .addCallback(
+    new CallbackListener() {
+    public void controlEvent(CallbackEvent theEvent) {
+      if (theEvent.getController().isMouseOver() == true && theEvent.getController().isActive() == true) {
+        MouseRepositioner.mouseMove(800,480);
+        theEvent.getController().setMousePressed(true);
+        theEvent.getController().setMousePressed(false);
+      }
+    }
+  });
   Style_Sub_Buttons("Move_Winder_Down");
-  Carriage_Right_Limit = cp5.addButton("Auto").setPosition(x/2 + x/6 + x/10, y/2 - y/3 - y);
+  Carriage_Right_Limit = cp5.addButton("Auto").setPosition(x/2 + x/6 + x/10, y/2 - y/3 - y)
+    .activateBy(ControlP5.PRESSED)
+    .addCallback(
+    new CallbackListener() {
+    public void controlEvent(CallbackEvent theEvent) {
+      if (theEvent.getController().isMouseOver() == true && theEvent.getController().isActive() == true) {
+        MouseRepositioner.mouseMove(800,480);
+        theEvent.getController().setMousePressed(true);
+        theEvent.getController().setMousePressed(false);
+      }
+    }
+  });
   Style_Sub_Buttons("Auto");
-  Carriage_Left_Limit = cp5.addButton("Zero").setPosition(x/2 - 2*x/6 - x/10, y/2 - y/3 - y);
+  Carriage_Left_Limit = cp5.addButton("Zero").setPosition(x/2 - 2*x/6 - x/10, y/2 - y/3 - y)
+    .activateBy(ControlP5.PRESSED)
+    .addCallback(
+    new CallbackListener() {
+    public void controlEvent(CallbackEvent theEvent) {
+      if (theEvent.getController().isMouseOver() == true && theEvent.getController().isActive() == true) {
+        MouseRepositioner.mouseMove(800,480);
+        theEvent.getController().setMousePressed(true);
+        theEvent.getController().setMousePressed(false);
+      }
+    }
+  });
   Style_Sub_Buttons("Zero");
 
-  test = cp5.addButton("test").setPosition(x - x/8, -y/8);
+  test = cp5.addButton("test").setPosition(x - x/8, -y/8)
+    .activateBy(ControlP5.PRESSED)
+    .addCallback(
+    new CallbackListener() {
+    public void controlEvent(CallbackEvent theEvent) {
+      if (theEvent.getController().isMouseOver() == true && theEvent.getController().isActive() == true) {
+        MouseRepositioner.mouseMove(800,480);
+        theEvent.getController().setMousePressed(true);
+        theEvent.getController().setMousePressed(false);
+      }
+    }
+  });
   Style_back_Buttons("test");
   Stop = cp5.addButton("Stop").setPosition(x - x/8, -y/8)
+    .activateBy(ControlP5.PRESSED)
     .hide()
-    .setBroadcast(false);
+    .setBroadcast(false)
+    .addCallback(
+    new CallbackListener() {
+    public void controlEvent(CallbackEvent theEvent) {
+      if (theEvent.getController().isMouseOver() == true && theEvent.getController().isActive() == true) {
+        MouseRepositioner.mouseMove(800,480);
+        theEvent.getController().setMousePressed(true);
+        theEvent.getController().setMousePressed(false);
+      }
+    }
+  });
   Style_back_Buttons("Stop");
-  Winder_Speed_Down = cp5.addButton("Winder_Speed_Down").setPosition(x/2 - x/6 - x/5, y + y/2 - y/5 + y/2);
+  Winder_Speed_Down = cp5.addButton("Winder_Speed_Down").setPosition(x/2 - x/6 - x/5, y + y/2 - y/5 + y/2)
+    .activateBy(ControlP5.PRESSED)
+    .addCallback(
+    new CallbackListener() {
+    public void controlEvent(CallbackEvent theEvent) {
+      if (theEvent.getController().isMouseOver() == true && theEvent.getController().isActive() == true) {
+        MouseRepositioner.mouseMove(800,480);
+        theEvent.getController().setMousePressed(true);
+        theEvent.getController().setMousePressed(false);
+      }
+    }
+  });
   Style_Sub_Buttons("Winder_Speed_Down");
-  Carriage_Speed_Down = cp5.addButton("Carriage_Speed_Down").setPosition(x/2 - x/6 - x/5, y + y/2 - y/5);
+  Carriage_Speed_Down = cp5.addButton("Carriage_Speed_Down").setPosition(x/2 - x/6 - x/5, y + y/2 - y/5)
+    .activateBy(ControlP5.PRESSED)
+    .addCallback(
+    new CallbackListener() {
+    public void controlEvent(CallbackEvent theEvent) {
+      if (theEvent.getController().isMouseOver() == true && theEvent.getController().isActive() == true) {
+        MouseRepositioner.mouseMove(800,480);
+        theEvent.getController().setMousePressed(true);
+        theEvent.getController().setMousePressed(false);
+      }
+    }
+  });
   Style_Sub_Buttons("Carriage_Speed_Down");
-  Winder_Speed_Up = cp5.addButton("Winder_Speed_Up").setPosition(x/2 + x/5, y + y/2 - y/5 + y/2);
+  Winder_Speed_Up = cp5.addButton("Winder_Speed_Up").setPosition(x/2 + x/5, y + y/2 - y/5 + y/2)
+    .activateBy(ControlP5.PRESSED)
+    .addCallback(
+    new CallbackListener() {
+    public void controlEvent(CallbackEvent theEvent) {
+      if (theEvent.getController().isMouseOver() == true && theEvent.getController().isActive() == true) {
+        MouseRepositioner.mouseMove(800,480);
+        theEvent.getController().setMousePressed(true);
+        theEvent.getController().setMousePressed(false);
+      }
+    }
+  });
   Style_Sub_Buttons("Winder_Speed_Up");
-  Carriage_Speed_Up = cp5.addButton("Carriage_Speed_Up").setPosition(x/2 + x/5, y + y/2 - y/5);
+  Carriage_Speed_Up = cp5.addButton("Carriage_Speed_Up").setPosition(x/2 + x/5, y + y/2 - y/5)
+    .activateBy(ControlP5.PRESSED)
+    .addCallback(
+    new CallbackListener() {
+    public void controlEvent(CallbackEvent theEvent) {
+      if (theEvent.getController().isMouseOver() == true && theEvent.getController().isActive() == true) {
+        MouseRepositioner.mouseMove(800,480);
+        theEvent.getController().setMousePressed(true);
+        theEvent.getController().setMousePressed(false);
+      }
+    }
+  });
   Style_Sub_Buttons("Carriage_Speed_Up");
   Winder_Speed_Knob = cp5.addSlider("Winder_Speed_Knob").setPosition(x/2 - x/5, y/2 + y/4 - y)
     .setNumberOfTickMarks(50)
@@ -673,7 +818,8 @@ public void Create_Buttons() {
     .addCallback(
     new CallbackListener() {
     public void controlEvent(CallbackEvent theEvent) {
-      if (theEvent.getAction()==ControlP5.ACTION_PRESS) {
+      if (theEvent.getController().isMouseOver() == true) {
+        Ammount.setFocus(true);
         Is_Text_Pressed = true;
       }
     }
@@ -685,19 +831,20 @@ public void Create_Buttons() {
     .addCallback(
     new CallbackListener() {
     public void controlEvent(CallbackEvent theEvent) {
-      if (theEvent.getAction()==ControlP5.ACTION_PRESS) {
+      if (theEvent.getController().isMouseOver() == true) {
+        Bobbin_Diameter.setFocus(true);
         Is_Text_Pressed = true;
       }
     }
-  }
-    )
+  })
   .setText("");
   Style_Text_Feild("Bobbin_Diameter");
   Bobbin_Length = cp5.addTextfield("Bobbin_Length").setPosition(x/2 - x/3, y + y/2 - y/15)
     .addCallback(
     new CallbackListener() {
     public void controlEvent(CallbackEvent theEvent) {
-      if (theEvent.getAction()==ControlP5.ACTION_PRESS) {
+      if (theEvent.getController().isMouseOver() == true) {
+        Bobbin_Length.setFocus(true);
         Is_Text_Pressed = true;
       }
     }
@@ -705,19 +852,23 @@ public void Create_Buttons() {
   )
   .setText("");
   Style_Text_Feild("Bobbin_Length");
+  
   for (int i = 0, j = 0, k = 0; i < Num_Pad_Button_num; i++, k++) {
     Buttons.add(cp5.addButton(Num_Pad_Button_names[i])
-      .setPosition(x + x/1.8f + (((x + 5)/10) * k), y/5 + (((y + 5)/10) * j)));
+      .activateBy(ControlP5.PRESSED)
+      .setPosition(x + (((x + 5)/10) * k), y/5 + (((y + 5)/10) * j)));
     Style_Number_Pad(Num_Pad_Button_names[i]);
-
     if (k == 2) {
       k = -1;
       j++;
     }
   }
-  Metric = cp5.addButton("in").setPosition(x + x/1.8f + (((x + 5)/10) * 2), y/5 + (((y + 5)/10) * 3));
+  
+  Metric = cp5.addButton("in").setPosition(x + (((x + 5)/10) * 2), y/5 + (((y + 5)/10) * 3))
+    .activateBy(ControlP5.PRESSED);
   Style_Number_Pad("in");
-  zero = cp5.addButton("0").setPosition(x + x/1.8f + (((x + 5)/10) * 0), y/5 + (((y + 5)/10) * 3))
+  zero = cp5.addButton("0").setPosition(x + (((x + 5)/10) * 0), y/5 + (((y + 5)/10) * 3))
+    .activateBy(ControlP5.PRESSED)
     .addCallback(
     new CallbackListener() {
     public void controlEvent(CallbackEvent theEvent) {
@@ -729,9 +880,31 @@ public void Create_Buttons() {
   }
   );
   Style_Sub_Number_Pad("0");
-  enter = cp5.addButton("enter").setPosition(x + x/1.8f + (((x + 5)/10) * 3), y/5 + (((y + 5)/10) * 0));
+  enter = cp5.addButton("enter").setPosition(x + (((x + 5)/10) * 3), y/5 + (((y + 5)/10) * 0))
+    .activateBy(ControlP5.PRESSED)
+    .addCallback(
+    new CallbackListener() {
+    public void controlEvent(CallbackEvent theEvent) {
+      if (theEvent.getController().isMouseOver() == true && theEvent.getController().isActive() == true) {
+        MouseRepositioner.mouseMove(800,480);
+        theEvent.getController().setMousePressed(true);
+        theEvent.getController().setMousePressed(false);
+      }
+    }
+  });
   Style_Sub_2_Number_Pad("enter");
-  Del = cp5.addButton("Del").setPosition(x + x/1.8f + (((x + 5)/10) * 3), y/5 + (((y + 5)/10) * 2));
+  Del = cp5.addButton("Del").setPosition(x + (((x + 5)/10) * 3), y/5 + (((y + 5)/10) * 2))
+    .activateBy(ControlP5.PRESSED)
+    .addCallback(
+    new CallbackListener() {
+    public void controlEvent(CallbackEvent theEvent) {
+      if (theEvent.getController().isMouseOver() == true && theEvent.getController().isActive() == true) {
+        MouseRepositioner.mouseMove(800,480);
+        theEvent.getController().setMousePressed(true);
+        theEvent.getController().setMousePressed(false);
+      }
+    }
+  });   
   Style_Sub_2_Number_Pad("Del");
 }
 /*
@@ -921,7 +1094,8 @@ public void Style_Number_Pad(String Name) {
   c.addCallback(
     new CallbackListener() {
     public void controlEvent(CallbackEvent theEvent) {
-      if (theEvent.getAction()==ControlP5.ACTION_PRESS) {
+      if (theEvent.getController().isMouseOver() == true && Another_Stuid_Checker == false) {
+        MouseRepositioner.mouseMove(800,480);
         holder = theEvent.getController().getName();
         Another_Stuid_Checker = true;
       }
@@ -968,6 +1142,107 @@ public void Style_Text_Feild(String Name) {
   c.setColorForeground(color(81, 255, 246));
   c.setColorActive(color(144, 255, 238));
 }
+class Extender extends Thread {
+  boolean running;
+  int count = 0;
+  boolean limitedFramerate = true; //Disables the frame limiting, go as fast as it can!
+
+  Extender() {
+    running = false;
+    count = 0;
+  }
+
+  public void start() {
+    running = true;
+    super.start();
+  }
+
+  public void run() {
+    while (running) {
+      boolean runIt = false;
+      
+      if (limitedFramerate) {
+        if (count > 1000) {
+          runIt = true;
+        }
+      }
+      else {
+        runIt = true;
+      }
+
+      if (runIt) {
+        if (Is_Main_Button_Pressed_true) {      //checks when a certain button is pressed with these series of if statements
+          if (temp == 0) {                      //temp is used to store the initial frame count upon update position being called
+            Main_checker = false;
+            Back_checker = false;
+            temp = 1;
+          }
+          else {
+            Main_Button_Pressed(framerate);
+          }
+        }
+        count = 0;
+        delay(10);
+      }
+      count++;
+    }
+  }
+
+  public void quit() {
+    running = false;
+    interrupt();
+  }
+}
+
+class Retractor extends Thread {
+  boolean running;
+  int count = 0;
+  boolean limitedFramerate = true; //Disables the frame limiting, go as fast as it can!
+
+  Retractor() {
+    running = false;
+    count = 0;
+  }
+
+  public void start() {
+    running = true;
+    super.start();
+  }  
+
+  public void run() {
+    while (running) {
+      boolean runIt = false;
+      if (limitedFramerate) {
+        if (count > 1000) {
+          runIt = true;
+        }
+      } else {
+        runIt = true;
+      }
+
+      if (runIt) {
+        if (Is_Back_Button_Pressed) {
+          if (temp == 0) {
+            Main_checker = false;
+            Back_checker = false;
+            temp = 1;
+          }
+          else {
+            Back_Button_Pressed(framerate);
+          }
+        }
+        count = 0;
+        delay(10);
+      }
+      count++;
+    }
+  }
+
+  public void quit() {
+    running = false;
+    interrupt();
+  }
+}
 /*
   Stores the methods that are used to initiate the movement of buttons when needed to
   
@@ -975,7 +1250,7 @@ public void Style_Text_Feild(String Name) {
   This method is extremly crude but I cant think of any other stupid way.
 */
 
-public void Update_Position() {
+/*void Update_Position() {
   if (IsDragged && rx < x/2 && Is_In_Submenu == false) {
     for (int i = 0; i < Button_num; i++) {
       if (ry - dist[i][updown[i]] < 0 - Buttons.get(i).getHeight()) {
@@ -999,11 +1274,10 @@ public void Update_Position() {
       }
     }
   }
-}
+}*/
 
 public void Main_Button_Pressed(float frames) {
-  boolean Main = Retract_Main_button(frames);
-  boolean Back = Extend_Back_Button(frames);
+  cp5.setBroadcast(false);
   if (Main_Menu_Selected == 1) {
     boolean Manual = Extend_Manual_Control(frames);
   } else if (Main_Menu_Selected == 2) {
@@ -1011,15 +1285,21 @@ public void Main_Button_Pressed(float frames) {
   } else if (Main_Menu_Selected == 3) {
     boolean bobbin = Extend_Bobbin_Settings(frames);
   }
-  if (Main == true && Back == true) {
+  if(!Main_checker) {
+    Main_checker = Retract_Main_button(frames);
+  }
+  if(!Back_checker) {
+    Back_checker = Extend_Back_Button(frames);
+  }
+  if (Main_checker == true && Back_checker == true) {
+    cp5.setBroadcast(true);
     Is_Main_Button_Pressed_true = false;
     temp = 0;
   }
 }
 
 public void Back_Button_Pressed(float frames) {
-  boolean Main = Extend_Main_button(frames);
-  boolean Back = Retract_Back_Button(frames);
+  cp5.setBroadcast(false);
   switch (Main_Menu_Selected) {
   case 1 :
     boolean Manual = Retract_Manual_Control(frames);
@@ -1033,54 +1313,69 @@ public void Back_Button_Pressed(float frames) {
       boolean bobbin = Retract_Bobbin_Settings(frames);
     }
   }
-  if (Main == true && Back == true) {
+  if(!Main_checker) {
+    Main_checker = Extend_Main_button(frames);
+  }
+  if(!Back_checker) {
+    Back_checker = Retract_Back_Button(frames);
+  }
+  if (Main_checker == true && Back_checker == true) {
+    cp5.setBroadcast(true);
     Is_Back_Button_Pressed = false;
     temp = 0;
   }
 }
 
 public void Text_Field_Pressed(float frames) {
+  cp5.setBroadcast(false);
   boolean Num_Pad = Extend_Num_Pad(frames);
   if (Num_Pad == true) {
+    cp5.setBroadcast(true);
     temp = 0;
   }
 }
 
 public void Enter_Pressed(float frames) {
+  cp5.setBroadcast(false);
   boolean Num_Pad = Retract_Num_Pad(frames);
   if (Num_Pad == true) {
+    cp5.setBroadcast(true);
     Another_Stuid_Checker_The_Second = false;
     temp = 0;
   }
 }
 /*
   Stores miscellaneous methods that are part of the loop functions
-*/
+ */
 
 public void Num_Pad_Clicked() {
-  if (Ammount.isFocus()) {
-    if (Delete && !Ammount.getText().isEmpty()) {
-      Ammount.setText(Ammount.getText().substring(0, Ammount.getText().length() - 1));
-      Delete = false;
-    } else {
-      Ammount.setText(Ammount.getText() + holder);
+  println(holder);
+  if ((millis() - milisecs)/100 > 1) {
+    if (Ammount.isFocus()) {
+      if (Delete && !Ammount.getText().isEmpty()) {
+        Ammount.setText(Ammount.getText().substring(0, Ammount.getText().length() - 1));
+        Delete = false;
+      } else {
+        Ammount.setText(Ammount.getText() + holder);
+      }
     }
-  }
-  if (Bobbin_Diameter.isFocus()) {
-    if (Delete && !Bobbin_Diameter.getText().isEmpty()) {
-      Bobbin_Diameter.setText(Bobbin_Diameter.getText().substring(0, Bobbin_Diameter.getText().length() - 1));
-      Delete = false;
-    } else {
-      Bobbin_Diameter.setText(Bobbin_Diameter.getText() + holder);
+    if (Bobbin_Diameter.isFocus()) {
+      if (Delete && !Bobbin_Diameter.getText().isEmpty()) {
+        Bobbin_Diameter.setText(Bobbin_Diameter.getText().substring(0, Bobbin_Diameter.getText().length() - 1));
+        Delete = false;
+      } else {
+        Bobbin_Diameter.setText(Bobbin_Diameter.getText() + holder);
+      }
     }
-  }
-  if (Bobbin_Length.isFocus()) {
-    if (Delete && !Bobbin_Length.getText().isEmpty()) {
-      Bobbin_Length.setText(Bobbin_Length.getText().substring(0, Bobbin_Length.getText().length() - 1));
-      Delete = false;
-    } else {
-      Bobbin_Length.setText(Bobbin_Length.getText() + holder);
+    if (Bobbin_Length.isFocus()) {
+      if (Delete && !Bobbin_Length.getText().isEmpty()) {
+        Bobbin_Length.setText(Bobbin_Length.getText().substring(0, Bobbin_Length.getText().length() - 1));
+        Delete = false;
+      } else {
+        Bobbin_Length.setText(Bobbin_Length.getText() + holder);
+      }
     }
+  milisecs = millis();
   }
   Another_Stuid_Checker = false;
 }
@@ -1097,7 +1392,6 @@ public void Focus_Text_box() {
     Bobbin_Length.keepFocus(true);
   }
 }
-
   public void settings() {  size(800, 480);  smooth(); }
   static public void main(String[] passedArgs) {
     String[] appletArgs = new String[] { "--present", "--window-color=#666666", "--stop-color=#cccccc", "main" };

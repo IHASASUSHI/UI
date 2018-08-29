@@ -8,7 +8,7 @@ void Create_Buttons() {
     Start = cp5.addButton("Start").setPosition(x - x/4, 0);
   Style_Start_Button("Start");
   for (int i = 0; i < Button_num; i++) {
-    Buttons.add(cp5.addButton(Main_Button_names[i]).setPosition(0, ((y + (y/4))/Button_num) * i));
+    Buttons.add(cp5.addButton(Main_Button_names[i]).setPosition(0, ((y + (y/8))/Button_num) * i));
     Style_Main_Buttons(Main_Button_names[i]);
     updown[i] = 0;
   }
@@ -117,7 +117,7 @@ void Create_Buttons() {
   Style_Text_Feild("Bobbin_Length");
   for (int i = 0, j = 0, k = 0; i < Num_Pad_Button_num; i++, k++) {
     Buttons.add(cp5.addButton(Num_Pad_Button_names[i])
-      .setPosition(x + x/1.8 + (((x + 5)/10) * k), y/5 + (((y + 5)/10) * j)));
+      .setPosition(x + (((x + 5)/10) * k), y/5 + (((y + 5)/10) * j)));
     Style_Number_Pad(Num_Pad_Button_names[i]);
 
     if (k == 2) {
@@ -125,9 +125,9 @@ void Create_Buttons() {
       j++;
     }
   }
-  Metric = cp5.addButton("in").setPosition(x + x/1.8 + (((x + 5)/10) * 2), y/5 + (((y + 5)/10) * 3));
+  Metric = cp5.addButton("in").setPosition(x + (((x + 5)/10) * 2), y/5 + (((y + 5)/10) * 3));
   Style_Number_Pad("in");
-  zero = cp5.addButton("0").setPosition(x + x/1.8 + (((x + 5)/10) * 0), y/5 + (((y + 5)/10) * 3))
+  zero = cp5.addButton("0").setPosition(x + (((x + 5)/10) * 0), y/5 + (((y + 5)/10) * 3))
     .addCallback(
     new CallbackListener() {
     public void controlEvent(CallbackEvent theEvent) {
@@ -139,8 +139,8 @@ void Create_Buttons() {
   }
   );
   Style_Sub_Number_Pad("0");
-  enter = cp5.addButton("enter").setPosition(x + x/1.8 + (((x + 5)/10) * 3), y/5 + (((y + 5)/10) * 0));
+  enter = cp5.addButton("enter").setPosition(x + (((x + 5)/10) * 3), y/5 + (((y + 5)/10) * 0));
   Style_Sub_2_Number_Pad("enter");
-  Del = cp5.addButton("Del").setPosition(x + x/1.8 + (((x + 5)/10) * 3), y/5 + (((y + 5)/10) * 2));
+  Del = cp5.addButton("Del").setPosition(x + (((x + 5)/10) * 3), y/5 + (((y + 5)/10) * 2));
   Style_Sub_2_Number_Pad("Del");
 }

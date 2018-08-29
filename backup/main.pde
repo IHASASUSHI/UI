@@ -41,6 +41,8 @@ Slider Carriage_Speed_Knob;
 Textfield Ammount;
 Textfield Bobbin_Length;
 Textfield Bobbin_Diameter;
+Extender Extender = new Extender();
+Retractor Retractor = new Retractor();
 float Bobbin_Default_Length = 7011.46496815;          //hard coded value of the bobbin length
 int[][] dist = new int[Button_num][3];                //distance of the mouse to the position of all the buttons and holds the values of both where the button should go if upon being hit by the edge of the screen
 float x = 800;                                        //Screen Length
@@ -68,16 +70,24 @@ boolean IsHold = false;                               //tells if the user is hol
 boolean Another_Stuid_Checker = false;                //checks if there was a response from the nubmerpad
 boolean Another_Stuid_Checker_The_Second = false;     //checks if the enter button was pressed
 boolean Delete = false;                               //Checks if delete button is pressed
-float temp = frameCount;                              //Records the initial fame count upon the main menu being dragged
+float temp = 0;                              //Records the initial fame count upon the main menu being dragged
 String holder = "";
+boolean Main_checker = false;
+boolean Back_checker = false;
+int framerate = 10;
 
 void setup() {
 
   size(800, 480);
-  println(Serial.list());
-  String portNum = Serial.list()[0];
-  myPort = new Serial(this, portNum, 115200);
-  myPort.bufferUntil('\n');
+  try {
+    println(Serial.list());
+    String portNum = Serial.list()[0];
+    myPort = new Serial(this, portNum, 115200);
+    myPort.bufferUntil('\n');
+  }
+  catch (ArrayIndexOutOfBoundsException ex) {
+    println("ERROR, Arduino is either not connected or is not communicating. Please check the line connected to the Arduino and restart the PI");
+  }
   B.order(ByteOrder.BIG_ENDIAN);
 
   cp5 = new ControlP5(this);
@@ -94,6 +104,9 @@ void setup() {
     }
   }
 
+  Extender.start();
+  Retractor.start();
+
   noStroke();
   smooth();
 }
@@ -101,8 +114,8 @@ void setup() {
 void draw() {
   background(0);
   fill(255, 100);
-
-  if (mousePressed == false) {             //Records the position of the mouse when not pressed
+  
+  /*if (mousePressed == false) {             //Records the position of the mouse when not pressed
     py = mouseY;
     for (int i = 0; i < Button_num; i++) {
       by[i] = (int)Buttons.get(i).getPosition()[1];
@@ -110,26 +123,14 @@ void draw() {
   }
   rx = mouseX;                            //Records the position of the mouse
   ry = mouseY;
-  Update_Position();                      //Updates the position of the main menu
-
-  if (Is_Main_Button_Pressed_true) {      //checks when a certain button is pressed with these series of if statements
-    if (temp == 0) {                      //temp is used to store the initial frame count upon update position being called
-      temp = frameCount;                  //processing has a internal framecounter
-    }
-    Main_Button_Pressed(frameCount);
-  }
-  if (Is_Back_Button_Pressed) {
-    if (temp == 0) {
-      temp = frameCount;
-    }
-    Back_Button_Pressed(frameCount);
-  }
+  Update_Position();                      //Updates the position of the main menu*/
+    
   if (Ammount.isFocus() || Bobbin_Diameter.isFocus() || Bobbin_Length.isFocus()) {
     Focus_Text_box();
     if (temp == 0) {
-      temp = frameCount;
+      temp = 1;
     }
-    Text_Field_Pressed(frameCount);
+    Text_Field_Pressed(framerate);
 
     if (Another_Stuid_Checker) {          //got lazy naming the buttons but this one checks of a numpad was clicked
       Num_Pad_Clicked();
@@ -143,9 +144,9 @@ void draw() {
     Bobbin_Length.keepFocus(false);
     Bobbin_Length.setFocus(false);
     if (temp == 0) {
-      temp = frameCount;
+      temp = 1;
     }
-    Enter_Pressed(frameCount);
+    Enter_Pressed(framerate);
   }
 
   if (IsHold) {
@@ -160,6 +161,7 @@ void draw() {
   pushMatrix();                          //Fancy graphic thingy
   translate(width/2 + 150, height/2);
   rotate(frameCount*0.001);
+
   for (int x = 0; x<nx; x++) {
     for (int y = 0; y<ny; y++) {
       d[x][y].display();

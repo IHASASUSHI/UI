@@ -5,7 +5,7 @@
   This method is extremly crude but I cant think of any other stupid way.
 */
 
-void Update_Position() {
+/*void Update_Position() {
   if (IsDragged && rx < x/2 && Is_In_Submenu == false) {
     for (int i = 0; i < Button_num; i++) {
       if (ry - dist[i][updown[i]] < 0 - Buttons.get(i).getHeight()) {
@@ -29,11 +29,9 @@ void Update_Position() {
       }
     }
   }
-}
+}*/
 
 void Main_Button_Pressed(float frames) {
-  boolean Main = Retract_Main_button(frames);
-  boolean Back = Extend_Back_Button(frames);
   if (Main_Menu_Selected == 1) {
     boolean Manual = Extend_Manual_Control(frames);
   } else if (Main_Menu_Selected == 2) {
@@ -41,15 +39,19 @@ void Main_Button_Pressed(float frames) {
   } else if (Main_Menu_Selected == 3) {
     boolean bobbin = Extend_Bobbin_Settings(frames);
   }
-  if (Main == true && Back == true) {
+  if(!Main_checker) {
+    Main_checker = Retract_Main_button(frames);
+  }
+  if(!Back_checker) {
+    Back_checker = Extend_Back_Button(frames);
+  }
+  if (Main_checker == true && Back_checker == true) {
     Is_Main_Button_Pressed_true = false;
     temp = 0;
   }
 }
 
 void Back_Button_Pressed(float frames) {
-  boolean Main = Extend_Main_button(frames);
-  boolean Back = Retract_Back_Button(frames);
   switch (Main_Menu_Selected) {
   case 1 :
     boolean Manual = Retract_Manual_Control(frames);
@@ -63,7 +65,13 @@ void Back_Button_Pressed(float frames) {
       boolean bobbin = Retract_Bobbin_Settings(frames);
     }
   }
-  if (Main == true && Back == true) {
+  if(!Main_checker) {
+    Main_checker = Extend_Main_button(frames);
+  }
+  if(!Back_checker) {
+    Back_checker = Retract_Back_Button(frames);
+  }
+  if (Main_checker == true && Back_checker == true) {
     Is_Back_Button_Pressed = false;
     temp = 0;
   }
