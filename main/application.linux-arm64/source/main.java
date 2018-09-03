@@ -68,7 +68,6 @@ Textfield Ammount;
 Textfield Bobbin_Length;
 Textfield Bobbin_Diameter;
 Extender Extender = new Extender();
-Retractor Retractor = new Retractor();
 CallbackListener cb;
 float Bobbin_Default_Length = 7011.46496815f;          //hard coded value of the bobbin length
 int[][] dist = new int[Button_num][3];                //distance of the mouse to the position of all the buttons and holds the values of both where the button should go if upon being hit by the edge of the screen
@@ -141,7 +140,6 @@ public void setup() {
   }
 
   Extender.start();
-  Retractor.start();
 
   noStroke();
   
@@ -1181,46 +1179,6 @@ class Extender extends Thread {
             Main_Button_Pressed(framerate);
           }
         }
-        count = 0;
-        delay(10);
-      }
-      count++;
-    }
-  }
-
-  public void quit() {
-    running = false;
-    interrupt();
-  }
-}
-
-class Retractor extends Thread {
-  boolean running;
-  int count = 0;
-  boolean limitedFramerate = true; //Disables the frame limiting, go as fast as it can!
-
-  Retractor() {
-    running = false;
-    count = 0;
-  }
-
-  public void start() {
-    running = true;
-    super.start();
-  }  
-
-  public void run() {
-    while (running) {
-      boolean runIt = false;
-      if (limitedFramerate) {
-        if (count > 1000) {
-          runIt = true;
-        }
-      } else {
-        runIt = true;
-      }
-
-      if (runIt) {
         if (Is_Back_Button_Pressed) {
           if (temp == 0) {
             Main_checker = false;
@@ -1392,9 +1350,10 @@ public void Focus_Text_box() {
     Bobbin_Length.keepFocus(true);
   }
 }
+
   public void settings() {  size(800, 480);  smooth(); }
   static public void main(String[] passedArgs) {
-    String[] appletArgs = new String[] { "--present", "--window-color=#666666", "--stop-color=#cccccc", "main" };
+    String[] appletArgs = new String[] { "--present", "--window-color=#666666", "--hide-stop", "main" };
     if (passedArgs != null) {
       PApplet.main(concat(appletArgs, passedArgs));
     } else {

@@ -45,7 +45,6 @@ Textfield Ammount;
 Textfield Bobbin_Length;
 Textfield Bobbin_Diameter;
 Extender Extender = new Extender();
-Retractor Retractor = new Retractor();
 CallbackListener cb;
 float Bobbin_Default_Length = 7011.46496815;          //hard coded value of the bobbin length
 int[][] dist = new int[Button_num][3];                //distance of the mouse to the position of all the buttons and holds the values of both where the button should go if upon being hit by the edge of the screen
@@ -118,7 +117,6 @@ void setup() {
   }
 
   Extender.start();
-  Retractor.start();
 
   noStroke();
   smooth();

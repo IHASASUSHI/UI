@@ -37,46 +37,6 @@ class Extender extends Thread {
             Main_Button_Pressed(framerate);
           }
         }
-        count = 0;
-        delay(10);
-      }
-      count++;
-    }
-  }
-
-  void quit() {
-    running = false;
-    interrupt();
-  }
-}
-
-class Retractor extends Thread {
-  boolean running;
-  int count = 0;
-  boolean limitedFramerate = true; //Disables the frame limiting, go as fast as it can!
-
-  Retractor() {
-    running = false;
-    count = 0;
-  }
-
-  void start() {
-    running = true;
-    super.start();
-  }  
-
-  void run() {
-    while (running) {
-      boolean runIt = false;
-      if (limitedFramerate) {
-        if (count > 1000) {
-          runIt = true;
-        }
-      } else {
-        runIt = true;
-      }
-
-      if (runIt) {
         if (Is_Back_Button_Pressed) {
           if (temp == 0) {
             Main_checker = false;

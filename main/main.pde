@@ -11,6 +11,7 @@ String val;
 boolean firstContact = false;
 ByteBuffer B = ByteBuffer.allocate(4);
 
+float callbackchecker = -1;
 int milisecs = 0;
 Robot MouseRepositioner;
 Dong[][] d;                                          //Matrix for the UI background spinning dots
@@ -45,7 +46,6 @@ Textfield Ammount;
 Textfield Bobbin_Length;
 Textfield Bobbin_Diameter;
 Extender Extender = new Extender();
-Retractor Retractor = new Retractor();
 CallbackListener cb;
 float Bobbin_Default_Length = 7011.46496815;          //hard coded value of the bobbin length
 int[][] dist = new int[Button_num][3];                //distance of the mouse to the position of all the buttons and holds the values of both where the button should go if upon being hit by the edge of the screen
@@ -81,7 +81,7 @@ boolean Back_checker = false;
 int framerate = 10;
 
 void setup() {
-
+  frameRate(20);
   size(800, 480);
   try {
     println(Serial.list());
@@ -118,7 +118,6 @@ void setup() {
   }
 
   Extender.start();
-  Retractor.start();
 
   noStroke();
   smooth();
@@ -138,6 +137,8 @@ void draw() {
   ry = mouseY;
   Update_Position();                      //Updates the position of the main menu*/
     
+    
+
   if (Ammount.isFocus() || Bobbin_Diameter.isFocus() || Bobbin_Length.isFocus()) {
     Focus_Text_box();
     if (temp == 0) {
@@ -181,5 +182,4 @@ void draw() {
     }
   }
   popMatrix();
-  MouseRepositioner.mouseMove(800,480);
 }
